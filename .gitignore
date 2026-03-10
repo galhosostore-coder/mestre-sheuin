@@ -49,5 +49,10 @@ upload.cjs
 # Arquivos TypeScript
 *.tsbuildinfo
 
+# Arquivos gerados pelo build no diretório src (não commitar)
+src/**/*.d.ts
+src/**/*.js.map
+src/**/*.js
+
 # Outros
 .cache/
