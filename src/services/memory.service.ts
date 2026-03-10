@@ -18,7 +18,7 @@ class MemoryService {
   private openai: OpenAI;
   
   private readonly QDRANT_COLLECTION = 'user_facts';
-  private readonly EMBEDDING_MODEL = 'openai/text-embedding-3-small';
+  private readonly EMBEDDING_MODEL = 'qwen/qwen3-embedding-8b';
   private readonly EXTRACTION_MODEL = 'inception/mercury-2';
   private initialized = false;
 
