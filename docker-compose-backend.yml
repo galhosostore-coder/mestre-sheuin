@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    container_name: backend
+    ports:
+      - "3001:3000"
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./.wwebjs_auth:/app/.wwebjs_auth
+      - ./data/images:/data/images
+    restart: always

@@ -1,0 +1,17 @@
+import { GoogleGenAI } from '@google/genai';
+import dotenv from 'dotenv';
+dotenv.config();
+const ai = new GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY || '',
+});
+async function listModels() {
+    try {
+        const models = await ai.models.list();
+        console.log(models);
+    }
+    catch (err) {
+        console.error('Error listing models:', err);
+    }
+}
+listModels().catch(console.error);
+//# sourceMappingURL=list-models.js.map

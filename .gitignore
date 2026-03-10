@@ -1,0 +1,47 @@
+# Dependências do Node.js
+node_modules/
+
+# Variáveis de ambiente
+.env
+.env.local
+.env.*.local
+
+# Arquivos compilados
+dist/
+build/
+*.js.map
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Arquivos temporários
+*.tmp
+*.temp
+.temp/
+
+# Cobertura de testes
+coverage/
+
+# Arquivos de backup grandes
+backend.tar
+
+# Arquivos TypeScript
+*.tsbuildinfo
+
+# Outros
+.cache/
