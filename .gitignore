@@ -1,18 +1,20 @@
 # Dependências do Node.js
 node_modules/
 
-# Variáveis de ambiente
-.env
-.env.local
-.env.*.local
+# Variáveis de ambiente sensíveis (exclui todos os arquivos .env, mas mantém .env.example)
+.env*
+!.env.example
 
 # Arquivos compilados
 dist/
 build/
 *.js.map
+*.d.ts.map
 
 # Logs
 *.log
+*.log.*
+logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -22,6 +24,7 @@ lerna-debug.log*
 # Arquivos do sistema
 .DS_Store
 Thumbs.db
+Desktop.ini
 
 # IDEs
 .vscode/
@@ -30,29 +33,44 @@ Thumbs.db
 *.swo
 
 # Arquivos temporários
+tmp/
+temp/
+.temp/
+.cache/
 *.tmp
 *.temp
-.temp/
 
 # Cobertura de testes
 coverage/
 
-# Arquivos de backup grandes
-backend.tar
+# Chaves privadas e certificados
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.cer
 
-# Scripts com credenciais hardcoded (remover ou usar variáveis de ambiente)
-fetch_braip.js
-test_openrouter.cjs
-ssh-cmd.cjs
-upload.cjs
-
-# Arquivos TypeScript
+# TypeScript
 *.tsbuildinfo
 
-# Arquivos gerados pelo build no diretório src (não commitar)
-src/**/*.d.ts
-src/**/*.js.map
-src/**/*.js
+# Banco de dados (SQLite, etc.)
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
 
-# Outros
-.cache/
+# Lock files de outros gerenciadores de pacotes (projeto usa npm)
+yarn.lock
+pnpm-lock.yaml
+
+# Arquivos de backup específicos do projeto
+backend.tar
+
+# Arquivos de backup e outros
+*.bak
+*.orig
+*.rej
+*.pid
