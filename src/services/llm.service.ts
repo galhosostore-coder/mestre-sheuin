@@ -1,10 +1,11 @@
-import { GoogleGenAI } from '@google/genai';
+import OpenAI from 'openai';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY || '',
+const openai = new OpenAI({
+  baseURL: "https://openrouter.ai/api/v1",
+  apiKey: process.env.OPENROUTER_API_KEY || '',
 });
 
 export interface LLMResponse {
@@ -21,7 +22,7 @@ export interface MediaPart {
 const SYSTEM_PROMPT_MESTRE = `
 # O Manifesto do Sábio (System Prompt - Mestre Bot)
 
-Este documento define a instrução de base (System Prompt) para a inteligência artificial \`gemini-1.5-pro\` que orquestrará o comportamento do "Mestre Bot". O objetivo é conduzir o usuário por uma jornada de conscientização e compra de forma indireta, através do "Funil da Sabedoria".
+Este documento define a instrução de base (System Prompt) para a inteligência artificial \`z-ai/glm-5\` que orquestrará o comportamento do "Mestre Bot". O objetivo é conduzir o usuário por uma jornada de conscientização e compra de forma indireta, através do "Funil da Sabedoria".
 
 ---
 
@@ -115,76 +116,65 @@ class LLMService {
     try {
       let finalMessage = message ? `Mensagem do usuário: ${message}` : "O usuário enviou uma mídia.";
 
-      // Se houver mídia, usamos o modelo Flash para descrevê-la
+      // Se houver mídia, usamos o modelo Gemini 3.1 Flash Lite para descrevê-la
       if (media) {
         try {
-          console.log('[LLM Service] Interpretando mídia com modelo Flash...');
-          const flashParts: any[] = [
-            { text: "Descreva de forma clara e objetiva o que você vê nesta imagem, ou o que ouve neste áudio, ou o que acontece neste vídeo. Seja detalhista para ajudar na resposta ao usuário." },
-            {
-              inlineData: {
-                data: media.data,
-                mimeType: media.mimeType
+          console.log('[LLM Service] Interpretando mídia com modelo Gemini 3.1 Flash Lite...');
+          const multimodalResponse = await openai.chat.completions.create({
+            model: 'google/gemini-3.1-flash-lite-preview',
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  {
+                    type: 'text',
+                    text: "Descreva de forma clara e objetiva o que você vê nesta imagem, ou o que ouve neste áudio, ou o que acontece neste vídeo. Seja detalhista para ajudar na resposta ao usuário."
+                  },
+                  {
+                    type: 'image_url',
+                    image_url: {
+                      url: `data:${media.mimeType};base64,${media.data}`
+                    }
+                  }
+                ]
               }
-            }
-          ];
-
-          const flashResponse = await ai.models.generateContent({
-            model: 'gemini-1.5-flash',
-            contents: [
-              { role: 'user', parts: flashParts }
-            ]
+            ],
+            max_tokens: 500
           });
 
-          const mediaDescription = flashResponse.text;
+          const mediaDescription = multimodalResponse.choices[0]?.message?.content;
           if (mediaDescription) {
             console.log('[LLM Service] Descrição da mídia obtida com sucesso.');
             finalMessage += `\n\n[Mídia descrita pelo assistente visual para seu contexto]: ${mediaDescription}`;
           }
         } catch (flashError) {
-          console.error('[LLM Service Error] Falha ao interpretar mídia com o modelo Flash', flashError);
-          // Podemos adicionar uma string fallback caso a API da mídia falhe, para o Pro não ficar perdido.
+          console.error('[LLM Service Error] Falha ao interpretar mídia com o modelo Gemini 3.1', flashError);
           finalMessage += `\n\n[Ocorreu um erro ao tentar visualizar a mídia enviada pelo usuário.]`;
         }
       }
 
-      // Agora usamos o modelo Pro (Cérebro) com o contexto completo + mensagem
-      console.log('[LLM Service] Gerando resposta final com modelo Pro...');
-      const proParts: any[] = [
-        { text: `Contexto do Usuário (Memória): ${JSON.stringify(userContext)}\n\n${finalMessage}` }
-      ];
-
-      const responseSchema = {
-        type: 'OBJECT',
-        properties: {
-          text: { type: 'STRING', description: 'O texto da mensagem do Mestre Sábio.' },
-          type: { type: 'STRING', enum: ['text', 'audio', 'image'], description: 'O tipo de mensagem a ser enviada.' },
-          imageTheme: { type: 'STRING', description: 'Tema da imagem se type for image (ex: cha, bambu).' }
-        },
-        required: ['text', 'type']
-      };
-
+      // Agora usamos o modelo GLM-5 (Cérebro) com o contexto completo + mensagem
+      console.log('[LLM Service] Gerando resposta final com modelo GLM-5...');
+      
       const systemInstructionWithCatalog = `${SYSTEM_PROMPT_MESTRE}\n\n--- CATÁLOGO SECRETO DE ERVAS E CAMINHOS ---\n${CATALOGO_PRODUTOS}\n\n--- ORDEM FINAL ---\nVocê não manda links quebrado. Escolha apenas o link exato do CATALOGO.`;
 
-      console.log('[DEBUG] Validando premissas antes da chamada:');
-      console.log('1. Lei do Pêndulo existe?', systemInstructionWithCatalog.includes('A LEI DO PÊNDULO'));
-      console.log('2. Catálogo Braip existe?', systemInstructionWithCatalog.includes('ev.braip.com'));
-      console.log('3. Ordem Final existe?', systemInstructionWithCatalog.includes('Você não manda links quebrado'));
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-1.5-pro',
-        contents: [
-          { role: 'user', parts: proParts }
+      const response = await openai.chat.completions.create({
+        model: 'z-ai/glm-5',
+        messages: [
+          {
+            role: 'system',
+            content: systemInstructionWithCatalog
+          },
+          {
+            role: 'user',
+            content: `Contexto do Usuário (Memória): ${JSON.stringify(userContext)}\n\n${finalMessage}`
+          }
         ],
-        config: {
-          systemInstruction: systemInstructionWithCatalog,
-          responseMimeType: 'application/json',
-          responseSchema: responseSchema,
-          temperature: 0.7,
-        }
+        response_format: { type: 'json_object' },
+        temperature: 0.7,
       });
 
-      const responseContent = response.text;
+      const responseContent = response.choices[0]?.message?.content;
       if (!responseContent) {
         throw new Error('Nenhuma resposta do LLM.');
       }

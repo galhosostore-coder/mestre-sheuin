@@ -1,6 +1,6 @@
 import { Pool } from 'pg';
 import { QdrantClient } from '@qdrant/js-client-rest';
-import { GoogleGenAI } from '@google/genai';
+import { OpenAI } from 'openai';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
 
@@ -15,11 +15,11 @@ dotenv.config();
 class MemoryService {
   private pool: Pool;
   private qdrant: QdrantClient;
-  private ai: GoogleGenAI;
+  private openai: OpenAI;
   
   private readonly QDRANT_COLLECTION = 'user_facts';
-  private readonly EMBEDDING_MODEL = 'text-embedding-004';
-  private readonly EXTRACTION_MODEL = 'gemini-1.5-flash';
+  private readonly EMBEDDING_MODEL = 'openai/text-embedding-3-small';
+  private readonly EXTRACTION_MODEL = 'inception/mercury-2';
   private initialized = false;
 
   constructor() {
@@ -40,8 +40,11 @@ class MemoryService {
     }
     this.qdrant = new QdrantClient({ url: qdrantUrl });
 
-    // Configuração do Gemini (Extração de Fatos e Embeddings)
-    this.ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+    // Configuração do OpenRouter (Extração de Fatos e Embeddings)
+    this.openai = new OpenAI({
+      apiKey: process.env.OPENROUTER_API_KEY || '',
+      baseURL: 'https://openrouter.ai/api/v1'
+    });
     
     this.init().catch(err => console.error('[MemoryService] Erro na inicialização:', err));
   }
@@ -135,25 +138,30 @@ class MemoryService {
    * Analisa a mensagem com LLM, extrai fatos (Knowledge/Facts) e salva no VectorDB.
    */
   private async extractAndStoreFacts(userId: string, message: string) {
-    // Prompt para o Gemini extrair fatos
+    // Prompt para o modelo extrair fatos
     const prompt = `Analise a mensagem do usuário a seguir e extraia APENAS fatos permanentes ou importantes sobre o usuário (gostos, nome, família, profissão, preferências, restrições).
     Retorne uma lista JSON de strings simples. Retorne apenas o array JSON e mais nada. Se não houver nada importante a ser lembrado a longo prazo, retorne [].
     Mensagem do usuário: "${message}"`;
 
     try {
-      const response = await this.ai.models.generateContent({
+      const response = await this.openai.chat.completions.create({
         model: this.EXTRACTION_MODEL,
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          temperature: 0.1
-        }
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.1
       });
 
-      const text = response.text || "[]";
+      const text = response.choices[0]?.message?.content || "[]";
       let facts: string[] = [];
       try {
-        facts = JSON.parse(text);
+        // O modelo retorna um objeto JSON, então precisamos extrair o array
+        const parsed = JSON.parse(text);
+        facts = Array.isArray(parsed) ? parsed : [];
       } catch (parseErr) {
         console.error('[MemoryService] Erro ao fazer parse dos fatos JSON:', text);
         return;
@@ -165,12 +173,12 @@ class MemoryService {
 
       // Gerar embeddings para os fatos extraídos
       for (const fact of facts) {
-        const embeddingRes = await this.ai.models.embedContent({
+        const embeddingRes = await this.openai.embeddings.create({
           model: this.EMBEDDING_MODEL,
-          contents: fact
+          input: fact
         });
 
-        const vector = embeddingRes.embeddings?.[0]?.values;
+        const vector = embeddingRes.data[0]?.embedding;
         if (!vector) continue;
 
         // Salvar no Qdrant
@@ -209,11 +217,11 @@ class MemoryService {
       if (currentMessage) {
         try {
           // Gerar embedding da mensagem atual para busca semântica
-          const embeddingRes = await this.ai.models.embedContent({
+          const embeddingRes = await this.openai.embeddings.create({
             model: this.EMBEDDING_MODEL,
-            contents: currentMessage
+            input: currentMessage
           });
-          const queryVector = embeddingRes.embeddings?.[0]?.values;
+          const queryVector = embeddingRes.data[0]?.embedding;
 
           if (queryVector) {
             const searchResults = await this.qdrant.search(this.QDRANT_COLLECTION, {
