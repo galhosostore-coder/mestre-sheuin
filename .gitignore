@@ -40,6 +40,12 @@ coverage/
 # Arquivos de backup grandes
 backend.tar
 
+# Scripts com credenciais hardcoded (remover ou usar variáveis de ambiente)
+fetch_braip.js
+test_openrouter.cjs
+ssh-cmd.cjs
+upload.cjs
+
 # Arquivos TypeScript
 *.tsbuildinfo
 

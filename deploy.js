@@ -17,7 +17,7 @@ dotenv.config();
 const VPS_CONFIG = {
   host: '144.91.69.65',
   username: 'root',
-  password: '1823ORav',
+  password: process.env.SSH_PASSWORD || '',
   port: 22
 };
 

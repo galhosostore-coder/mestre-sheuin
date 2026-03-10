@@ -4,7 +4,7 @@ const fs = require('fs');
 // Usa variável de ambiente para o host, com fallback para localhost
 const host = process.env.SSH_HOST || 'localhost';
 const username = 'root';
-const password = process.env.SSH_PASSWORD || '1823ORav';
+const password = process.env.SSH_PASSWORD;
 
 const localFile = process.argv[2];
 const remoteFile = process.argv[3];

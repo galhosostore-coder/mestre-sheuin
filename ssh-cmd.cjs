@@ -3,7 +3,7 @@ const { Client } = require('ssh2');
 // Usa variável de ambiente para o host, com fallback para localhost
 const host = process.env.SSH_HOST || 'localhost';
 const username = 'root';
-const password = process.env.SSH_PASSWORD || '1823ORav';
+const password = process.env.SSH_PASSWORD;
 
 const command = process.argv.slice(2).join(' ');
 
